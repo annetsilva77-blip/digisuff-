@@ -1,0 +1,33 @@
+import cv2
+import base64
+import os
+
+# 1. Load your original image file
+img = cv2.imread('image_l7Rno7.png')
+
+if img is None:
+    print("Error: Could not find 'image_l7Rno7.png' in this folder!")
+else:
+    # 2. Downscale the image to the 64x64 GPU resolution limit
+    resized = cv2.resize(img, (64, 64), interpolation=cv2.INTER_AREA)
+
+    # 3. Translate pixel data into 4-byte bytes
+    binary_data = bytearray()
+    for row in resized:
+        for pixel in row:
+            b, g, r = pixel
+            binary_data.append(r)   # Red
+            binary_data.append(g)   # Green
+            binary_data.append(b)   # Blue
+            binary_data.append(255) # Alpha
+
+    # 4. Encode into the custom Base64 string
+    packed_string = base64.b64encode(binary_data).decode('utf-8')
+    
+    # 5. Save the entire long string directly to a text file
+    output_filename = "output.txt"
+    with open(output_filename, "w") as f:
+        f.write(packed_string)
+        
+    print(f"Success! The full text code has been saved to: {os.path.abspath(output_filename)}")
+    print("Open that file, copy everything inside, and paste it into Minetest!")
