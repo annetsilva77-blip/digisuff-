@@ -1,0 +1,101 @@
+- add to screens (big) channel screen_1_1 and screen_2_2
+
+if event.type == "program" then
+    mem.scale = 0.1
+    mem.state = 0
+    mem.timer = 0
+    interrupt(0.05)
+end
+
+if event.type == "interrupt" then
+    local cmds = {
+        {command = "createbuffer", buffer = 0, xsize = 64, ysize = 64, fill = "000000"}
+    }
+
+    if mem.state == 0 then
+        mem.scale = mem.scale + 0.08
+        if mem.scale >= 1.0 then
+            mem.scale = 1.0
+            mem.state = 1
+        end
+    elseif mem.state == 1 then
+        mem.timer = mem.timer + 1
+        if mem.timer > 40 then
+            mem.state = 2
+        end
+    elseif mem.state == 2 then
+        mem.scale = mem.scale - 0.08
+        if mem.scale <= 0.1 then
+            mem.scale = 0.1
+            mem.timer = 0
+            mem.state = 0
+        end
+    end
+
+    local sc = mem.scale
+    local cx = 32
+    local cy = 26
+
+    local bands = {
+        {dy = 0, dx1 = -20, dx2 = -6,  fill = "e5b800"},
+        {dy = 1, dx1 = -18, dx2 = -4,  fill = "e5b800"},
+        {dy = 2, dx1 = -15, dx2 = -2,  fill = "e5b800"},
+        {dy = 3, dx1 = -12, dx2 = 3,   fill = "e5b800"},
+        {dy = 4, dx1 = -9,  dx2 = 8,   fill = "00997a"},
+        {dy = 5, dx1 = -5,  dx2 = 14,  fill = "00997a"},
+        {dy = 6, dx1 = 0,   dx2 = 18,  fill = "4a6bba"},
+        {dy = 7, dx1 = 4,   dx2 = 20,  fill = "4a6bba"},
+        {dy = 8, dx1 = 6,   dx2 = 19,  fill = "4a6bba"}
+    }
+
+    for i = 1, #bands do
+        local b = bands[i]
+        local x1 = cx + math.floor(b.dx1 * sc)
+        local x2 = cx + math.floor(b.dx2 * sc)
+        local y = cy + math.floor((6 + b.dy) * sc)
+        if x2 >= x1 then
+            table.insert(cmds, {command = "drawrect", buffer = 0, x1 = x1, y1 = y, x2 = x2, y2 = y + 1, fill = b.fill})
+        end
+    end
+
+    local p_w = math.max(1, math.floor(4 * sc))
+    local p_h = math.floor(22 * sc)
+    local px1 = cx - math.floor(2 * sc)
+    local py1 = cy - math.floor(10 * sc)
+    local px2 = px1 + p_w
+    local py2 = py1 + p_h
+
+    if p_w > 0 and p_h > 0 then
+        table.insert(cmds, {command = "drawrect", buffer = 0, x1 = px1, y1 = py1, x2 = px2, y2 = py2, fill = "de1200"})
+    end
+
+    local loop_w = math.floor(7 * sc)
+    local loop_h = math.floor(11 * sc)
+    local lx1 = px2
+    local ly1 = py1
+    local lx2 = lx1 + loop_w
+    local ly2 = ly1 + loop_h
+
+    if loop_w > 0 and loop_h > 0 then
+        table.insert(cmds, {command = "drawrect", buffer = 0, x1 = lx1, y1 = ly1, x2 = lx2, y2 = ly2, fill = "de1200"})
+        
+        local hole_w = math.floor(3 * sc)
+        local hole_h = math.floor(5 * sc)
+        local hx1 = lx1
+        local hy1 = ly1 + math.floor(3 * sc)
+        local hx2 = hx1 + hole_w
+        local hy2 = hy1 + hole_h
+        
+        if hole_w > 0 and hole_h > 0 then
+            table.insert(cmds, {command = "drawrect", buffer = 0, x1 = hx1, y1 = hy1, x2 = hx2, y2 = hy2, fill = "000000"})
+        end
+    end
+
+    if mem.state == 1 then
+        table.insert(cmds, {command = "text", buffer = 0, x = 4, y = 52, color = "888888", text = "PlayStation"})
+    end
+
+    table.insert(cmds, {command = "send", buffer = 0, channel = "screen", screen_width = 3, screen_height = 2})
+    digiline_send("gpu", cmds)
+    interrupt(0.05)
+end
