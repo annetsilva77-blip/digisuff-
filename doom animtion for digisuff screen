@@ -1,0 +1,92 @@
+if event.type == "program" then
+    mem.frame = 0
+    mem.flash = 0
+    mem.enemy_x = 36
+    mem.enemy_z = 40
+    interrupt(0.05)
+end
+
+if event.type == "interrupt" then
+    mem.frame = mem.frame + 1
+    
+    mem.enemy_z = mem.enemy_z - 0.8
+    if mem.enemy_z < 10 then
+        mem.enemy_z = 45
+        mem.enemy_x = math.random(22, 42)
+        mem.flash = 3
+    end
+    
+    if mem.flash > 0 then mem.flash = mem.flash - 1 end
+
+    local cmds = {
+        {command = "createbuffer", buffer = 0, xsize = 64, ysize = 64, fill = "3a3a3a"}
+    }
+
+    local wall_color = "7a4a2a"
+    local floor_color = "666666"
+    if mem.flash > 0 then
+        wall_color = "a86a3a"
+        floor_color = "999999"
+    end
+
+    table.insert(cmds, {command = "drawrect", buffer = 0, x1 = 1, y1 = 30, x2 = 64, y2 = 52, fill = floor_color})
+
+    local perspective = {
+        {x1 = 1,  y1 = 1,  x2 = 14, y2 = 52},
+        {x1 = 2,  y1 = 4,  x2 = 12, y2 = 48},
+        {x1 = 3,  y1 = 8,  x2 = 10, y2 = 44},
+        {x1 = 4,  y1 = 12, x2 = 8,  y2 = 40},
+        
+        {x1 = 51, y1 = 1,  x2 = 64, y2 = 52},
+        {x1 = 53, y1 = 4,  x2 = 63, y2 = 48},
+        {x1 = 55, y1 = 8,  x2 = 62, y2 = 44},
+        {x1 = 57, y1 = 12, x2 = 61, y2 = 40}
+    }
+    
+    for i = 1, #perspective do
+        local p = perspective[i]
+        table.insert(cmds, {command = "drawrect", buffer = 0, x1 = p.x1, y1 = p.y1, x2 = p.x2, y2 = p.y2, fill = wall_color, edge = "1a0a05"})
+    end
+
+    table.insert(cmds, {command = "drawrect", buffer = 0, x1 = 9, y1 = 12, x2 = 56, y2 = 30, fill = "15151c"})
+
+    if mem.enemy_z > 10 then
+        local esz = math.floor(140 / mem.enemy_z)
+        if esz > 0 then
+            local ex = mem.enemy_x + math.floor(math.sin(mem.frame * 0.2) * 2)
+            local ey = 32
+            
+            table.insert(cmds, {command = "drawrect", buffer = 0, x1 = ex - esz, y1 = ey - esz, x2 = ex + esz, y2 = ey + esz, fill = "251205"})
+            table.insert(cmds, {command = "drawrect", buffer = 0, x1 = ex - math.floor(esz*0.7), y1 = ey - esz, x2 = ex + math.floor(esz*0.7), y2 = ey + esz, fill = "502010"})
+            table.insert(cmds, {command = "drawrect", buffer = 0, x1 = ex - math.floor(esz*0.4), y1 = ey - esz - math.floor(esz*0.4), x2 = ex + math.floor(esz*0.4), y2 = ey - esz, fill = "e0a080"})
+            table.insert(cmds, {command = "drawrect", buffer = 0, x1 = ex - 2, y1 = ey - esz + 1, x2 = ex + 2, y2 = ey - esz + 3, fill = "901010"})
+        end
+    end
+
+    local gx = 32 + math.floor(math.sin(mem.frame * 0.1) * 2)
+    local gy = 52
+    if mem.flash > 0 then
+        table.insert(cmds, {command = "drawrect", buffer = 0, x1 = gx - 4, y1 = gy - 12, x2 = gx + 4, y2 = gy, fill = "555555"})
+        table.insert(cmds, {command = "drawrect", buffer = 0, x1 = gx - 10, y1 = gy - 24, x2 = gx + 10, y2 = gy - 10, fill = "dd2211"})
+        table.insert(cmds, {command = "drawrect", buffer = 0, x1 = gx - 5, y1 = gy - 28, x2 = gx + 5, y2 = gy - 12, fill = "ffdd44"})
+        table.insert(cmds, {command = "drawrect", buffer = 0, x1 = gx - 2, y1 = gy - 32, x2 = gx + 2, y2 = gy - 12, fill = "ffffff"})
+    else
+        table.insert(cmds, {command = "drawrect", buffer = 0, x1 = gx - 3, y1 = gy - 15, x2 = gx + 3, y2 = gy, fill = "2a2a2a"})
+        table.insert(cmds, {command = "drawrect", buffer = 0, x1 = gx - 1, y1 = gy - 20, x2 = gx + 1, y2 = gy - 15, fill = "111111"})
+    end
+
+    table.insert(cmds, {command = "drawrect", buffer = 0, x1 = 1, y1 = 53, x2 = 64, y2 = 64, fill = "222222", edge = "444444"})
+    
+    local hp_color = mem.flash > 0 and "ff3333" or "aa1111"
+    table.insert(cmds, {command = "text", buffer = 0, x = 3, y = 54, color = hp_color, text = "93"})
+    
+    table.insert(cmds, {command = "drawrect", buffer = 0, x1 = 28, y1 = 54, x2 = 36, y2 = 63, fill = "e0a080"})
+    table.insert(cmds, {command = "drawrect", buffer = 0, x1 = 30, y1 = 56, x2 = 31, y2 = 57, fill = "111199"})
+    table.insert(cmds, {command = "drawrect", buffer = 0, x1 = 33, y1 = 56, x2 = 34, y2 = 57, fill = "111199"})
+    
+    table.insert(cmds, {command = "text", buffer = 0, x = 44, y = 54, color = "aa6611", text = "82"})
+
+    table.insert(cmds, {command = "send", buffer = 0, channel = "screen"})
+    digiline_send("gpu", cmds)
+    interrupt(0.05)
+end
