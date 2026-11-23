@@ -1,0 +1,153 @@
+if event.type == "program" then
+    mem.scale = 0.1
+    mem.state = 0
+    mem.timer = 0
+    interrupt(0.05)
+end
+
+if event.type == "interrupt" then
+    local cmds_top = {
+        {command = "createbuffer", buffer = 0, xsize = 64, ysize = 64, fill = "000000"}
+    }
+    local cmds_bottom = {
+        {command = "createbuffer", buffer = 1, xsize = 64, ysize = 64, fill = "000000"}
+    }
+    local cmds_right = {
+        {command = "createbuffer", buffer = 2, xsize = 64, ysize = 64, fill = "000000"}
+    }
+
+    if mem.state == 0 then
+        mem.scale = mem.scale + 0.08
+        if mem.scale >= 1.0 then
+            mem.scale = 1.0
+            mem.state = 1
+        end
+    elseif mem.state == 1 then
+        mem.timer = mem.timer + 1
+        if mem.timer > 40 then
+            mem.state = 3
+        end
+    end
+
+    local sc = mem.scale
+    local cx = 32
+    local cy = 40  
+
+    local bands = {
+        {dy = 0, dx1 = -20, dx2 = -6,  fill = "e5b800"},
+        {dy = 1, dx1 = -18, dx2 = -4,  fill = "e5b800"},
+        {dy = 2, dx1 = -15, dx2 = -2,  fill = "e5b800"},
+        {dy = 3, dx1 = -12, dx2 = 3,   fill = "e5b800"},
+        {dy = 4, dx1 = -9,  dx2 = 8,   fill = "00997a"},
+        {dy = 5, dx1 = -5,  dx2 = 14,  fill = "00997a"},
+        {dy = 6, dx1 = 0,   dx2 = 18,  fill = "4a6bba"},
+        {dy = 7, dx1 = 4,   dx2 = 20,  fill = "4a6bba"},
+        {dy = 8, dx1 = 6,   dx2 = 19,  fill = "4a6bba"}
+    }
+
+    for i = 1, #bands do
+        local b = bands[i]
+        local x1 = math.max(1, math.min(64, cx + math.floor(b.dx1 * sc)))
+        local x2 = math.max(1, math.min(64, cx + math.floor(b.dx2 * sc)))
+        local y = math.max(1, math.min(64, cy + math.floor((6 + b.dy) * sc)))
+        local y2 = math.max(1, math.min(64, y + 1))
+        if x2 >= x1 then
+            table.insert(cmds_top, {command = "drawrect", buffer = 0, x1 = x1, y1 = y, x2 = x2, y2 = y2, fill = b.fill})
+        end
+    end
+
+    local p_w = math.max(1, math.floor(4 * sc))
+    local p_h = math.floor(22 * sc)
+    local px1 = math.max(1, math.min(64, cx - math.floor(2 * sc)))
+    local py1 = math.max(1, math.min(64, cy - math.floor(10 * sc)))
+    local px2 = math.max(1, math.min(64, px1 + p_w))
+    local py2 = math.max(1, math.min(64, py1 + p_h))
+
+    if p_w > 0 and p_h > 0 then
+        table.insert(cmds_top, {command = "drawrect", buffer = 0, x1 = px1, y1 = py1, x2 = px2, y2 = py2, fill = "de1200"})
+    end
+
+    local loop_w = math.floor(7 * sc)
+    local loop_h = math.floor(11 * sc)
+    local lx1 = px2
+    local ly1 = py1
+    local lx2 = math.max(1, math.min(64, lx1 + loop_w))
+    local ly2 = math.max(1, math.min(64, ly1 + loop_h))
+
+    if loop_w > 0 and loop_h > 0 then
+        table.insert(cmds_top, {command = "drawrect", buffer = 0, x1 = lx1, y1 = ly1, x2 = lx2, y2 = ly2, fill = "de1200"})
+        
+        local hole_w = math.floor(3 * sc)
+        local hole_h = math.floor(5 * sc)
+        local hx1 = lx1
+        local hy1 = math.max(1, math.min(64, ly1 + math.floor(3 * sc)))
+        local hx2 = math.max(1, math.min(64, hx1 + hole_w))
+        local hy2 = math.max(1, math.min(64, hy1 + hole_h))
+        
+        if hole_w > 0 and hole_h > 0 then
+            table.insert(cmds_top, {command = "drawrect", buffer = 0, x1 = hx1, y1 = hy1, x2 = hx2, y2 = hy2, fill = "000000"})
+        end
+    end
+
+    local text_brightness = math.floor(sc * 255)
+    
+    if text_brightness > 16 then
+        local hex_str = string.format("%02x", text_brightness)
+        local display_color = hex_str .. hex_str .. hex_str
+        
+        local text_y = math.max(1, math.min(64, math.floor(26 - (10 * sc))))
+        
+        local left_text_x = math.max(1, math.min(64, math.floor(30 - (24 * sc))))
+        table.insert(cmds_bottom, {
+            command = "text",
+            buffer = 1,
+            x = left_text_x,
+            y = text_y + 1, 
+            color = display_color,
+            text = "PLAYSTATIO"
+        })
+
+        local bx = 3
+        local by = text_y + 4
+        
+        local identical_n_matrix = {
+            {x=0, y=0, w=1, h=7},
+            {x=1, y=1, w=1, h=2},
+            {x=2, y=3, w=1, h=2},
+            {x=3, y=5, w=1, h=2},
+            {x=4, y=0, w=1, h=7}
+        }
+        
+        for k = 1, #identical_n_matrix do
+            local item = identical_n_matrix[k]
+            
+            local rx1 = math.max(1, math.min(64, bx + item.x))
+            local ry1 = math.max(1, math.min(64, by + item.y))
+            local rx2 = math.max(1, math.min(64, rx1 + item.w - 1))
+            local ry2 = math.max(1, math.min(64, ry1 + item.h - 1))
+            
+            table.insert(cmds_right, {
+                command = "drawrect",
+                buffer = 2,
+                x1 = rx1,
+                y1 = ry1,
+                x2 = rx2,
+                y2 = ry2,
+                fill = display_color
+            })
+        end
+    end
+
+    table.insert(cmds_top, {command = "send", buffer = 0, channel = "screen"})
+    digiline_send("gpu", cmds_top)
+
+    table.insert(cmds_bottom, {command = "send", buffer = 1, channel = "screen_bottom"})
+    digiline_send("gpu", cmds_bottom)
+
+    table.insert(cmds_right, {command = "send", buffer = 2, channel = "screen_right"})
+    digiline_send("gpu", cmds_right)
+    
+    if mem.state ~= 3 then
+        interrupt(0.05)
+    end
+end
